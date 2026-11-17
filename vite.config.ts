@@ -88,6 +88,12 @@ export default defineConfig({
             },
         }),
     ]),
+    ssr: {
+        // Bundle every dependency into bootstrap/ssr/ssr.js. Deploys ship only
+        // build output (no node_modules), so the SSR server must be
+        // self-contained.
+        noExternal: true,
+    },
     server: {
         watch: {
             ignored: [
