@@ -12,6 +12,7 @@ export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            ssr: 'resources/js/ssr.tsx',
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {
@@ -57,10 +58,10 @@ export default defineConfig({
                 importScripts: ['/push-sw.js'],
             },
             manifest: {
-                name: 'Sprinkle of Positivity',
-                short_name: 'Sprinkle',
+                name: 'Light Shining in the Dark',
+                short_name: 'Light Shining',
                 description:
-                    'A daily Bible verse, study groups, and shared reflections.',
+                    'An online Bible study accountability community: a daily Bible verse, study groups, and shared reflections.',
                 theme_color: '#d60685',
                 background_color: '#ffffff',
                 display: 'standalone',

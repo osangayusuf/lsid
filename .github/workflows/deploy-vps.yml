@@ -68,12 +68,12 @@ jobs:
 
       - name: Build frontend assets
         env:
-          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Sprinkle of Positivity' }}
+          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Light Shining in the Dark' }}
         run: |
           cp .env.example .env
           php artisan key:generate
           npm ci
-          npm run build
+          npm run build:ssr
           rm .env
 
       - name: Check deploy settings
@@ -190,6 +190,9 @@ jobs:
           # Tell the persistent queue worker to exit after its current job so
           # the process manager restarts it on the new code.
           php artisan queue:restart
+          # Same for the Inertia SSR server (a no-op until INERTIA_SSR_ENABLED
+          # is on and a process manager is running `inertia:start-ssr`).
+          php artisan inertia:stop-ssr || true
           if [ -n "${2:-}" ]; then
             bash -c "$2"
           fi

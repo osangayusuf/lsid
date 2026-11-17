@@ -17,6 +17,8 @@ class SeoController extends Controller
         'testimonials' => ['monthly', '0.7'],
         'hangout' => ['monthly', '0.6'],
         'support' => ['monthly', '0.6'],
+        'register' => ['monthly', '0.6'],
+        'login' => ['monthly', '0.5'],
         'manual' => ['monthly', '0.5'],
     ];
 
@@ -38,8 +40,6 @@ class SeoController extends Controller
         '/marketplace',
         '/certificates',
         '/leaderboard',
-        '/login',
-        '/register',
     ];
 
     public function robots(): Response
@@ -58,9 +58,12 @@ class SeoController extends Controller
 
     public function sitemap(): Response
     {
+        $lastModified = $this->lastModified();
+
         $urls = collect(self::PUBLIC_ROUTES)->map(fn (array $meta, string $name) => sprintf(
-            '<url><loc>%s</loc><changefreq>%s</changefreq><priority>%s</priority></url>',
+            '<url><loc>%s</loc>%s<changefreq>%s</changefreq><priority>%s</priority></url>',
             e($name === 'root' ? url('/') : route($name)),
+            $lastModified === null ? '' : '<lastmod>'.$lastModified.'</lastmod>',
             $meta[0],
             $meta[1],
         ));
@@ -71,5 +74,16 @@ class SeoController extends Controller
             .'</urlset>';
 
         return response($xml, 200, ['Content-Type' => 'application/xml']);
+    }
+
+    /**
+     * The date of the last frontend build, used as a proxy for when the public
+     * pages last changed. Null when the app has not been built.
+     */
+    private function lastModified(): ?string
+    {
+        $manifest = public_path('build/manifest.json');
+
+        return is_file($manifest) ? date('Y-m-d', filemtime($manifest)) : null;
     }
 }

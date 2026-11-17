@@ -656,8 +656,9 @@ export default function Landing() {
     return (
         <>
             <Seo
-                title="Light Shining in the Dark | Bible study accountability community"
-                description={program.intro}
+                title="Bible study accountability community and daily Bible verse"
+                description="Join an online Bible study accountability community. Read a daily Bible verse, join a study group, and grow in faith alongside an accountability partner."
+                withOrganizationSchema
             />
 
             <a

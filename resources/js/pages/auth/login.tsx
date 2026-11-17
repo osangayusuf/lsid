@@ -1,6 +1,7 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import Seo from '@/components/seo';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,7 +21,10 @@ type Props = {
 export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
-            <Head title="Log in" />
+            <Seo
+                title="Log in"
+                description="Log in to Light Shining in the Dark to read today's Bible verse, join your Bible study group and stay accountable."
+            />
 
             <PasskeyVerify />
 

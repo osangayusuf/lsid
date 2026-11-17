@@ -42,7 +42,7 @@ async function showNotification(payload) {
         return;
     }
 
-    await self.registration.showNotification(payload.title || 'Sprinkle of Positivity', {
+    await self.registration.showNotification(payload.title || 'Light Shining in the Dark', {
         body: payload.body || '',
         icon: payload.icon || '/icons/icon-192.png',
         badge: payload.badge || '/icons/icon-192.png',

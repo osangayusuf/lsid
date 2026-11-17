@@ -24,8 +24,8 @@ export default function AccountabilityPartners({
     return (
         <>
             <Seo
-                title="Accountability partners"
-                description="Meet the accountability partners who walk alongside members of Light Shining in the Dark."
+                title="Meet our Bible study accountability partners"
+                description="Meet the accountability partners who walk alongside members of Light Shining in the Dark and keep them consistent in Bible study."
             />
             <div className="landing bg-paper text-ink min-h-screen">
                 <div className="mx-auto max-w-7xl px-5 py-10 md:px-8 lg:py-16">

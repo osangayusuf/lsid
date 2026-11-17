@@ -63,8 +63,8 @@ export default function Hangout({ photos }: { photos: Photo[] }) {
     return (
         <>
             <Seo
-                title="Hangout photos"
-                description="Photos from the Light Shining in the Dark community hangout."
+                title="Community hangout photos"
+                description="Photos from the Light Shining in the Dark Bible study community hangout, where members meet in person."
             />
             <div className="landing bg-paper text-ink min-h-screen">
                 <div className="mx-auto max-w-7xl px-5 py-10 md:px-8 lg:py-16">
