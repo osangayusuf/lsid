@@ -52,6 +52,10 @@ export default defineConfig({
                 // precached JS/CSS/icons are served from cache; HTML
                 // responses always go to the network.
                 navigateFallback: null,
+                // Web Push `push` / `notificationclick` handlers live in
+                // public/push-sw.js. Without this the generated worker
+                // receives pushes but never displays them.
+                importScripts: ['/push-sw.js'],
             },
             manifest: {
                 name: 'Light Shining in the Dark',

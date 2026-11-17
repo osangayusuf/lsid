@@ -1,0 +1,199 @@
+name: deploy-vps
+
+# Deploys main to a VPS over SSH (rsync). Run it by hand from the Actions tab
+# (a dry run by default, which only lists what would change), or set the
+# repository variable AUTO_DEPLOY_VPS=true to deploy every time the tests
+# workflow passes on main. This is the VPS counterpart of deploy.yml (cPanel
+# over FTPS); the two are independent.
+#
+# Unlike the FTP deploy, SSH can run commands, so migrations and cache
+# rebuilds happen right here instead of via `deploy:finish`. The server needs
+# a persistent queue worker (e.g. a systemd unit running `php artisan
+# queue:work`), which `queue:restart` below tells to reload the new code.
+#
+# Secrets (environment "production"): VPS_HOST, VPS_USER, VPS_SSH_KEY,
+# VPS_KNOWN_HOSTS (output of `ssh-keyscan -p <port> <host>`).
+# Variables: VPS_PORT (default 22), VPS_PATH (absolute app directory on the
+# server), VPS_POST_DEPLOY_COMMAND (optional, e.g. a php-fpm reload).
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: list changes without uploading or running anything'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (vars.AUTO_DEPLOY_VPS == 'true' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Build frontend assets
+        env:
+          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Light Shining in the Dark' }}
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          npm ci
+          npm run build:ssr
+          rm .env
+
+      - name: Check deploy settings
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ vars.VPS_PATH }}
+        run: |
+          # rsync --delete runs against VPS_PATH, so refuse anything that
+          # could point it at the server root or at nothing at all.
+          missing=0
+          for name in VPS_HOST VPS_USER; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is empty or not available to the production environment."
+              missing=1
+            fi
+          done
+          case "$VPS_PATH" in
+            ''|/|/home|/var|/var/www|/root)
+              echo "::error::Variable VPS_PATH is '$VPS_PATH'. Set it (as a variable, not a secret) to the app's own directory, e.g. /var/www/sprinkle."
+              missing=1
+              ;;
+            /*) ;;
+            *)
+              echo "::error::Variable VPS_PATH must be an absolute path, got '$VPS_PATH'."
+              missing=1
+              ;;
+          esac
+          exit $missing
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          # Drop any Windows line endings picked up when the secret was pasted.
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          # `ssh-keygen -y` derives the public key, which fails for a key that
+          # is truncated, passphrase-protected or really a .pub file.
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null; then
+            echo "::error::VPS_SSH_KEY is not a usable private key. Paste the whole file (BEGIN/END lines included) of a key created with an empty passphrase, not the .pub file."
+            exit 1
+          fi
+
+      - name: Upload application
+        env:
+          DRY_RUN: ${{ inputs.dry_run == true && '--dry-run' || '' }}
+          VPS_PORT: ${{ vars.VPS_PORT || 22 }}
+        run: |
+          # Server-owned paths (.env, uploads, logs, caches) are excluded so
+          # --delete never touches them.
+          set +e
+          rsync -az --delete --itemize-changes $DRY_RUN \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -p $VPS_PORT" \
+            --exclude='.git*' \
+            --exclude='node_modules/' \
+            --exclude='.deploy/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='.ai/' \
+            --exclude='.claude/' \
+            --exclude='.github/' \
+            --exclude='.mcp.json' \
+            --exclude='boost.json' \
+            --exclude='CLAUDE.md' \
+            --exclude='design-reference/' \
+            --exclude='tests/' \
+            --exclude='/storage/' \
+            --exclude='/bootstrap/cache/' \
+            --exclude='database/*.sqlite' \
+            --exclude='/public/hot' \
+            --exclude='/public/storage' \
+            --exclude='/resources/js/' \
+            --exclude='/resources/css/' \
+            ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ vars.VPS_PATH }}/" \
+            2> "$RUNNER_TEMP/rsync.err"
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/rsync.err" >&2
+
+          # Exit 24 means every other file transferred and only some source
+          # files disappeared mid-run. Name them instead of failing the whole
+          # deploy over it; any other non-zero status is still a failure.
+          if [ "$status" -eq 24 ]; then
+            vanished=$(grep -i 'has vanished' "$RUNNER_TEMP/rsync.err" | head -n 20 || true)
+            echo "::warning title=rsync skipped vanished files::$(echo "$vanished" | tr '\n' ' ')"
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+
+      - name: Finish deploy on the server
+        if: ${{ inputs.dry_run != true }}
+        env:
+          VPS_PORT: ${{ vars.VPS_PORT || 22 }}
+          VPS_PATH: ${{ vars.VPS_PATH }}
+          POST_DEPLOY_COMMAND: ${{ vars.VPS_POST_DEPLOY_COMMAND }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -p "$VPS_PORT" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            bash -s -- "$VPS_PATH" "$POST_DEPLOY_COMMAND" <<'REMOTE'
+          set -euo pipefail
+          # Group-writable files, so the web server (www-data) can use what
+          # this deploy user creates in storage/ and bootstrap/cache/.
+          umask 002
+          cd "$1"
+          mkdir -p bootstrap/cache storage/framework/{cache,sessions,views} storage/logs
+          php artisan migrate --force
+          php artisan optimize:clear
+          php artisan optimize
+          [ -e public/storage ] || php artisan storage:link
+          # Tell the persistent queue worker to exit after its current job so
+          # the process manager restarts it on the new code.
+          php artisan queue:restart
+          # Same for the Inertia SSR server (a no-op until INERTIA_SSR_ENABLED
+          # is on and a process manager is running `inertia:start-ssr`).
+          php artisan inertia:stop-ssr || true
+          if [ -n "${2:-}" ]; then
+            bash -c "$2"
+          fi
+          REMOTE
