@@ -59,7 +59,7 @@ jobs:
 
       - name: Build frontend assets
         env:
-          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Sprinkle of Positivity' }}
+          VITE_APP_NAME: ${{ vars.VITE_APP_NAME || 'Light Shining in the Dark' }}
         run: |
           cp .env.example .env
           php artisan key:generate

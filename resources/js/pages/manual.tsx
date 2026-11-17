@@ -47,8 +47,8 @@ export default function Manual({
     return (
         <>
             <Seo
-                title="User manual"
-                description="The complete guide to using Light Shining in the Dark: member guide, groups, quizzes and more."
+                title="User manual: Bible study groups, quizzes and daily verse"
+                description="The complete guide to using Light Shining in the Dark: the daily Bible verse, Bible study groups, accountability partners, quizzes and more."
             />
             <div className="landing bg-paper text-ink min-h-screen">
                 <div className="mx-auto max-w-7xl px-5 py-10 md:px-8 lg:py-16">

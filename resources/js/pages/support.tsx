@@ -10,8 +10,8 @@ export default function Support() {
     return (
         <>
             <Seo
-                title="Give and support the program"
-                description="Support Light Shining in the Dark, a Bible study accountability community, with a gift. Giving is entirely optional."
+                title="Give to support our Bible study community"
+                description="Support Light Shining in the Dark, an online Bible study accountability community, with a gift. Giving is entirely optional."
             />
             <div className="landing bg-paper text-ink min-h-screen">
                 <div className="mx-auto max-w-7xl px-5 py-10 md:px-8 lg:py-16">

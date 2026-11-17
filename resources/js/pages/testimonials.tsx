@@ -81,8 +81,8 @@ export default function Testimonials() {
     return (
         <>
             <Seo
-                title="Testimonials"
-                description="Read how Light Shining in the Dark has helped members grow in their faith and stay consistent in Bible study."
+                title="Testimonials from our Bible study community"
+                description="Read how Light Shining in the Dark has helped members grow in their faith, find accountability and stay consistent in daily Bible study."
             />
             <div className="landing bg-paper text-ink min-h-screen">
                 <div className="mx-auto max-w-7xl px-5 py-10 md:px-8 lg:py-16">

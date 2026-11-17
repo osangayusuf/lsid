@@ -13,7 +13,7 @@ export default function Appearance() {
                 <Heading
                     variant="small"
                     title="Appearance"
-                    description="Choose how Sprinkle of Positivity looks on this device"
+                    description="Choose how Light Shining in the Dark looks on this device"
                 />
                 <AppearanceTabs />
             </div>

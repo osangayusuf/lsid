@@ -1,4 +1,4 @@
-# Sprinkle of Positivity — User Manual
+# Light Shining in the Dark — User Manual
 
 The platform for the **Light Shining in the Dark** Bible study accountability community. Members join groups, read a verse each day, share a short reflection (an "insight"), and keep a streak going with the help of an accountability partner.
 
